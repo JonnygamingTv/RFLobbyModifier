@@ -1,0 +1,51 @@
+name: Build Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest  # Required for .NET Framework 4.8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore RFLobbyModifier.csproj
+
+      - name: Build
+        run: |
+          msbuild RFLobbyModifier.csproj `
+            /p:Configuration=Release `
+            /p:Platform="AnyCPU" `
+            /p:TargetFrameworkVersion=v4.8
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RFLobbyModifier
+          path: |
+            bin/Release/net48/RFLobbyModifier.dll
+            bin/Release/net48/RFLobbyModifier.xml
+          if-no-files-found: error
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          files: bin/Release/net48/RFLobbyModifier.dll
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
